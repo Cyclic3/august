@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import re
 import textwrap
@@ -50,6 +51,10 @@ def do_xform(x):
     return var
 
 def main():
+    if len(sys.argv) != 2:
+        print(F"Usage: {sys.argv[0]} <SCRIPT_PATH>", file=sys.stderr)
+        return 1
+
     with open(sys.argv[1], encoding="utf-8") as file:
         remaining = file.read()
     
