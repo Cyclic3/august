@@ -3,6 +3,7 @@ import sys
 import re
 import textwrap
 import dataclasses
+import secrets
 
 ### These regexes are run after maple codegen, before everything is put in single quotes
 ###
@@ -11,7 +12,7 @@ fixup = [
     # This fixes accidental omission of output=string.
     #
     # It is very much imperfect, and using this function directly instead of the xform is generally unnecessary
-    (r"latex[ ]+\(((?:(?!output\s*=)[^)])*)\)", r"latex(\1, output = string)"),
+    (r"latex +\(((?:(?!output\s*=)[^)])*)\)", r"latex(\1, output = string)"),
     # This escapes square brackets and single quotes, as these fail within single quotes in Mobius
     (r"([\[\]'])", r"""'"\1"'""")
 ]
@@ -20,14 +21,15 @@ fixup = [
 #
 # Note that the flush here is 100% required and took me like an hour to work out why it wasn't working >:(
 def maple_plot(x):
-    return x.with_value(f"""(proc()
-      file := FileTools:-TemporaryFile("",".svg"):
-      plottools:-exportplot(file, {x}):
-      FileTools:-Text:-Close(file):
-      data := "data:image/svg+xml;base64," || (StringTools:-Encode(FileTools:-Text:-ReadFile(file), encoding=base64)):
-      FileTools:-Remove(file):
-      data
-    end proc)()""")
+    return x.with_value(textwrap.dedent(f"""
+    (proc()
+        file := FileTools:-TemporaryFile("",".svg"):
+        plottools:-exportplot(file, {x.value}):
+        FileTools:-Text:-Close(file):
+        data := "data:image/svg+xml;base64," || (StringTools:-Encode(FileTools:-Text:-ReadFile(file), encoding=base64)):
+        FileTools:-Remove(file):
+        data
+    end proc)()""").strip())
 
 @dataclasses.dataclass
 class Export:
@@ -61,7 +63,7 @@ def parse_export(x):
     """Evaluates an export string into a name and value, applying any requested transforms"""
     # Split out transforms
     x = x.strip()
-    args = x.split("|")
+    args = list(map(str.strip, x.split("|")))
     # The default export is just name and name
     var = Export(args[0], args[0])
     # Default to just the string transform
@@ -96,6 +98,7 @@ def main():
             continue
         code_match = re.match(r"((?:[^(]|\([^*]|\(\*[^!]|)*)", remaining, re.MULTILINE)
         if code_match:
+            boilerplate = []
             # Extract the code and shrink the remaining portion
             code = code_match.group(1)
             remaining = code[code_match.end(1):]
@@ -103,17 +106,30 @@ def main():
             matched_exports = re.findall(r'#!export\s*(.*)', code)
             exports = []
             for matched in matched_exports:
-                exports += list(map(parse_export, filter(None, re.split(r',|\s', matched))))
+                exports += list(map(parse_export, filter(None, re.split(r',', matched))))
             # Add exports to maple code
             export_maple = ", ".join(i.value for i in exports)
             code += "\n# Generated code follows:\n" + export_maple + ";\n"
+            # Check to see if we need the rng boilerplate
+            if not re.search(r'^#!norandom$', code, re.MULTILINE):
+                # Generate a unique naming prefix
+                rng_var = f'august_internal_{secrets.token_hex(8)}_'
+                # Anything >= 1e9 will be converted into scientific notation
+                boilerplate.append(textwrap.dedent(fr"""
+                    # Generating seed for upcoming maple block
+                    ${rng_var} = rint(1E9);
+                """).strip())
+                code = f'# Seeding from Mobius-supplied result\nrandomize(${rng_var});\n{code}'.strip()
             # Indent
             code = textwrap.indent(code, "    ")
             # Fixups
             for (match, subs) in fixup:
-                code = re.sub(match, subs, remaining)
+                code = re.sub(match, subs, code)
             # Put frame around
             code = f"""$maple_result = maple('\n{code}\n');\n"""
+            # Apply boilerplate
+            if boilerplate:
+                code = f"{'\n'.join(boilerplate)}\n{code}"
             # Add exports to mobius code
             code += '\n'.join(f"${i.name} = switch({idx}, $maple_result);" for idx, i in enumerate(exports))
             print(code)

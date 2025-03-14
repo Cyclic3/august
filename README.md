@@ -5,8 +5,6 @@ _FFI for Mobius_
 Just call `august.py` with a path to your script file, and it will print the generated Mobius code
 
 # Script documentation
-## Mobius code
-Mobius code can be stored within `(*!mobius *)` blocks. Be aware that each one of these splits the maple code, so if you have one anywhere else but the very beginning or very end of your script, you will end up with multiple `maple` calls. A situtation that requires this should never happen, so please raise an issue if you come across one!
 ## Exports
 You can export the variables `foo` and `bar` from Maple to Mobius like so:
 ```
@@ -16,6 +14,23 @@ This will create Mobius variables `$foo` and `$bar` respectively. If you want to
 ```
 #!export foo, bar, baz|quux|wibble(3)
 ```
+## Mobius code
+We have made every effort to make sure that all of the functionality available in Mobius can be done purely with standard August, including RNG. However, it is possible that there is a feature that is not nicely implementable in Maple. If you come across such a shortcoming, please raise an issue and we'll see if we can add it!
+
+In the meantime, Mobius code can be stored within `(*!mobius *)` blocks. For example, the (admittedly contrived code):
+```
+(*!mobius
+    $x = 2;
+*)
+y := $x + 3;
+#!export y
+```
+will output something that behaves the same as the following, albeit with a lot more boilerplate:
+```
+$x := 2;
+y := maple("$x + 3");
+```
+Be aware that each one of these splits the maple code, so if you have one anywhere else but the very beginning or very end of your script, you will end up with multiple `maple` calls. A situtation that requires this should never happen, so please raise an issue if you come across one!
 ## Transforms
 ### `latex`
 This converts the value to latex
@@ -34,3 +49,7 @@ This will create a `$foo` Mobius variable. In a question (or answer), you can ad
 `foo|dp(3)` will give a float rounded to 3 decimal places.
 ## Fixups
 August also fixes a couple of common mistakes, such as forgetting to put `output=string` into Maple's `latex` function. It also escapes characters, allowing you to use quotes and brackets without drawing Mobius' ire.
+## `#!norandom`
+**DO NOT USE THIS UNLESS YOU ARE 100% SURE THAT THE GENERATED MAPLE CODE WILL NOT GENERATE ANY RANDOM NUMBERS!**
+
+This directive disables the RNG setup boilerplate, which fetches (assumed) good random numbers from Mobius. If you mess up and call the RNG after this, Maple's inbuilt (and very insecure) RNG seeding mechanism will be called. Such failures will include race conditions, where occasionally two students will be given identical questions.
