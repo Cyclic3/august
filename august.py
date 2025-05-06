@@ -14,7 +14,7 @@ fixup = [
     # It is very much imperfect, and using this function directly instead of the xform is generally unnecessary
     (r"latex +\(((?:(?!output\s*=)[^)])*)\)", r"latex(\1, output = string)"),
     # This escapes square brackets and single quotes, as these fail within single quotes in Mobius
-    (r"([\[\]'])", r"""'"\1"'""")
+    (r"([\[\]'/])", r"""'"\1"'""")
 ]
 
 ### Generates an SVG plot by writing it to disk, reading it back, and deleting the file
@@ -102,16 +102,60 @@ def main():
             # Extract the code and shrink the remaining portion
             code = code_match.group(1)
             remaining = code[code_match.end(1):]
+
             # Extract the exports and parse them
-            matched_exports = re.findall(r'#!export\s*(.*)', code)
+            matched_exports = re.findall(r'^\s*#!export\s*(.*)$', code, re.MULTILINE)
             exports = []
             for matched in matched_exports:
                 exports += list(map(parse_export, filter(None, re.split(r',', matched))))
+
+            # Directives
+            norandom_directive = bool(re.search(r'^\s*#!evil_norandom$', code, re.MULTILINE))
+            test_directive = bool(re.search(r'^\s*#!evil_test$', code, re.MULTILINE))
+            reproduce_directive = re.search(r'^\s*#!evil_reproduce\s*(.*)$', code, re.MULTILINE)
+            noassert_directive = re.search(r'^\s*#!evil_noassert\s*(.*)$', code, re.MULTILINE)
+
             # Add exports to maple code
             export_maple = ", ".join(i.value for i in exports)
-            code += "\n# Generated code follows:\n" + export_maple + ";\n"
+            code += "\n# Generated code follows:\nprint(" + export_maple + ");\n"
+
+            # Handle noassert
+            if noassert_directive:
+                pass
+            # Check if in debug mode
+            elif re.search(r'^\s*#!evil_debug$', code, re.MULTILINE) or reproduce_directive:
+                code = f'kernelopts(assertlevel=1);\n{code}'
+            # Check if in test mode
+            elif test_directive:
+                prefix = f'august_internal_{secrets.token_hex(8)}_'
+                state_var = f'{prefix}state'
+                iter_var = f'{prefix}iter'
+                code = fr"""local ASSERT := proc(x, y := "assertion failed") if not x then error(y) fi end proc:
+for {iter_var} from 1 do
+    try
+        {state_var} := RandomTools:-GetState();
+{textwrap.indent(code, "        ")}
+        next:
+    catch:
+        error(sprintf("<br>Error: %s<br>Loop: %d<br>Reproduce with:<pre>#!evil_reproduce %s</pre>", lastexception[2], {iter_var}, convert({state_var}, string)));
+        stop;
+    end try:
+end;"""
+            else:
+                code = fr"""local ASSERT := proc(x, y := "assertion failed") if not x then error(y) fi end proc:
+do
+    try
+{textwrap.indent(code, "        ")}
+        break:
+    catch: next
+    end try:
+end:"""
+
+            if reproduce_directive:
+                code = f'# DO NOT DEPLOY THIS: forcing seed\nRandomTools:-SetState(state={reproduce_directive.group(1)}):\n{code}'
+                
             # Check to see if we need the rng boilerplate
-            if not re.search(r'^#!evil_norandom$', code, re.MULTILINE):
+            elif not norandom_directive:
                 # Generate a unique naming prefix
                 rng_var_prefix = f'august_internal_{secrets.token_hex(8)}_'
                 # Anything >= 1e9 will be converted into scientific notation
@@ -127,6 +171,7 @@ def main():
             # Fixups
             for (match, subs) in fixup:
                 code = re.sub(match, subs, code)
+
             # Put frame around
             code = f"""$maple_result = maple('\n{code}\n');\n"""
             # Apply boilerplate

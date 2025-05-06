@@ -1,0 +1,15 @@
+ans1 := rand(-10..10)();
+ans2 := rand(-10..10)();
+func := expand((x-ans1) * (x-ans2));
+# The following assertions do not properly check to see if there are other correct answers
+#ASSERT(eval(func(x), x=ans1) = 0, "First root does not work");
+#ASSERT(eval(func(x), x=ans2) = 0, "Second root does not work");
+
+# The following assertion will fail when the two roots are equal
+#ASSERT(convert(roots(func), set) = {[ans1, 1], [ans2, 1]}, "Roots mismatch");
+
+# This assertion captures everything we want
+ASSERT(MultiSet(roots(func)) = MultiSet(ans1, ans2), "Roots mismatch");
+
+graph := plot(func);
+#!export ans1, ans2, func, func|latex|suffix(latex), graph|plot

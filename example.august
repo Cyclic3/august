@@ -1,9 +1,9 @@
 (*!mobius
     $foo = 3;
 *)
-
 ans1 := rand(-10..10)();
 ans2 := rand(-10..10)();
+ASSERT(ans1 != ans2, "Answers were the same");
 f := expand((x-ans1) * (x-ans2));
 graph := plot(f);
 #!export ans1, ans2, f, f | suffix(latex) | latex, graph | plot
