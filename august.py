@@ -111,15 +111,17 @@ def main():
             export_maple = ", ".join(i.value for i in exports)
             code += "\n# Generated code follows:\n" + export_maple + ";\n"
             # Check to see if we need the rng boilerplate
-            if not re.search(r'^#!norandom$', code, re.MULTILINE):
+            if not re.search(r'^#!evil_norandom$', code, re.MULTILINE):
                 # Generate a unique naming prefix
-                rng_var = f'august_internal_{secrets.token_hex(8)}_'
+                rng_var_prefix = f'august_internal_{secrets.token_hex(8)}_'
                 # Anything >= 1e9 will be converted into scientific notation
+                # Also, for some reason known only unto god, `rint` seems to be bounded by the 32 bit signed integer limit
                 boilerplate.append(textwrap.dedent(fr"""
                     # Generating seed for upcoming maple block
-                    ${rng_var} = rint(1E9);
+                    ${rng_var_prefix}0 = rint(1E9);
+                    ${rng_var_prefix}1 = rint(1E9);
                 """).strip())
-                code = f'# Seeding from Mobius-supplied result\nrandomize(${rng_var});\n{code}'.strip()
+                code = f'# Seeding from Mobius-supplied result\nrandomize(${rng_var_prefix}0 * 1000000000 + ${rng_var_prefix}1):\n{code}'.strip()
             # Indent
             code = textwrap.indent(code, "    ")
             # Fixups
