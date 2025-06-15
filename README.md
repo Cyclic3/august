@@ -51,7 +51,7 @@ These directives can and will break everything if you leave them in. No deployed
 This will run the code on a loop until either Mobius times it out or an error is thrown in a loop. If you get a timeout, that means that no loop threw an error, and so you can be reasonably confident that it will not crash when presented to a student (unless your Mobius-supplied random parameters alter this behaviour!). When combined with `ASSERT`, you can end up with high confidence that questions will be valid.
 
 When an error is reached, it will have the seed at the start of the loop appended to it, and instructions will be provided in the error to reproduce the bug.
-## `#!evil_debug`
+### `#!evil_debug`
 By default, August runs the code over and over until it doesn't error. In the actual assessment, this is desirable behaviour, because the worst case is exactly the same, and the best case stops coding mistakes (including failed `ASSERT`s) from giving a student an empty question.
 
 However, this makes debugging the code rather painful. The `#!debug` directive disables this loop, and instead dumps all errors (including asserts) to the Mobius output, which will cause the script to crash and burn in a more debuggable way. If you forget to remove this before deployment, you will lose the loop protection, but everything else should run fine. Try not to forget though!
