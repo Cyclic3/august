@@ -45,9 +45,9 @@ This will create a `$foo` Mobius variable. In a question (or answer), you can ad
 `foo|dp(3)` will give a float rounded to 3 decimal places.
 ## Fixups
 August also fixes a couple of common mistakes, such as forgetting to put `output=string` into Maple's `latex` function. It also escapes characters, allowing you to use quotes and brackets without drawing Mobius' ire.
-### Evil directives
+## Evil directives
 These directives can and will break everything if you leave them in. No deployed code should ever have an `#!evil_*` directive, and if it does, terrible things can and will happen. Check to nake sure none of them make it through. Please.
-## `#!evil_test`
+### `#!evil_test`
 This will run the code on a loop until either Mobius times it out or an error is thrown in a loop. If you get a timeout, that means that no loop threw an error, and so you can be reasonably confident that it will not crash when presented to a student (unless your Mobius-supplied random parameters alter this behaviour!). When combined with `ASSERT`, you can end up with high confidence that questions will be valid.
 
 When an error is reached, it will have the seed at the start of the loop appended to it, and instructions will be provided in the error to reproduce the bug.
@@ -57,10 +57,10 @@ By default, August runs the code over and over until it doesn't error. In the ac
 However, this makes debugging the code rather painful. The `#!debug` directive disables this loop, and instead dumps all errors (including asserts) to the Mobius output, which will cause the script to crash and burn in a more debuggable way. If you forget to remove this before deployment, you will lose the loop protection, but everything else should run fine. Try not to forget though!
 
 Debug mode superseeds test mode, because the other way around will just kill any question that has it left in by mistake.
-## `#!evil_noassert`
+### `#!evil_noassert`
 This will disable `ASSERT` checking completely. This is good for debugging mathematical logic errors, but is obviously a really really bad thing in deployment. Do not deploy with this directive on.
 
-## `#!evil_norandom`
+### `#!evil_norandom`
 **DO NOT USE THIS UNLESS YOU ARE 100% SURE THAT THE GENERATED MAPLE CODE WILL NOT GENERATE ANY RANDOM NUMBERS!**
 
 This directive disables the RNG setup boilerplate, which fetches (assumed) good random numbers from Mobius. If you mess up and call the RNG after this, Maple's inbuilt (and very insecure) RNG seeding mechanism will be called. Such failures will include race conditions, where occasionally two students will be given identical questions, and may make certain questions unmarkable
