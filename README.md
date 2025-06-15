@@ -46,7 +46,7 @@ This will create a `$foo` Mobius variable. In a question (or answer), you can ad
 ## Fixups
 August also fixes a couple of common mistakes, such as forgetting to put `output=string` into Maple's `latex` function. It also escapes characters, allowing you to use quotes and brackets without drawing Mobius' ire.
 ## Evil directives
-These directives can and will break everything if you leave them in. No deployed code should ever have an `#!evil_*` directive, and if it does, terrible things can and will happen. Check to nake sure none of them make it through. Please.
+These directives can and will break everything if you leave them in. No deployed code should ever have an `#!evil_*` directive, and if it does, terrible things can and will happen. Check to make sure none of them make it through. Please.
 ### `#!evil_test`
 This will run the code on a loop until either Mobius times it out or an error is thrown in a loop. If you get a timeout, that means that no loop threw an error, and so you can be reasonably confident that it will not crash when presented to a student (unless your Mobius-supplied random parameters alter this behaviour!). When combined with `ASSERT`, you can end up with high confidence that questions will be valid.
 
