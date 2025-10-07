@@ -88,7 +88,7 @@ def main():
 
     with open(sys.argv[1], encoding="utf-8") as file:
         remaining = file.read()
-    
+
     # Match comments
     while len(remaining := remaining.strip()) > 0:
         mobius_match = re.match(r"\(\*!mobius[^\n]*\n?((?:[^*]|\*[^)])*?)[\s]*\*\)", remaining, re.MULTILINE)
@@ -101,7 +101,7 @@ def main():
             boilerplate = []
             # Extract the code and shrink the remaining portion
             code = code_match.group(1)
-            remaining = code[code_match.end(1):]
+            remaining = remaining[code_match.end(0):]
 
             # Extract the exports and parse them
             matched_exports = re.findall(r'^\s*#!export\s*(.*)$', code, re.MULTILINE)
